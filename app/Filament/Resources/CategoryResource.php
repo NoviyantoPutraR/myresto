@@ -15,13 +15,32 @@ class CategoryResource extends Resource
 {
     protected static ?string $model = Category::class;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
+    public static function getModelLabel(): string
+    {
+        return 'Kategori';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Kategori';
+    }
+
+
+
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationLabel = 'Kategori';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label('Nama Kategori')
                     ->required()
                     ->maxLength(255),
             ]);
@@ -32,6 +51,7 @@ class CategoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Nama Kategori')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

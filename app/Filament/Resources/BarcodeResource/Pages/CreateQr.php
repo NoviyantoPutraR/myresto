@@ -6,7 +6,7 @@ use App\Filament\Resources\BarcodeResource;
 use Filament\Forms\Form;
 use Filament\Forms;
 use Filament\Resources\Pages\Page;
-use App\Models\Barcode; // Ensure the Barcode model is imported
+use App\Models\Barcode;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -22,17 +22,29 @@ class CreateQr extends Page
     public function mount(): void
     {
         $this->form->fill();
-        $this->table_number = strtoupper(chr(rand(65, 90)) . rand(1000, 9999));
+        $this->table_number = 1; // Default to table number 1
     }
 
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('table_number')
+                Forms\Components\Select::make('table_number')
+                    ->label('Nomor Meja')
                     ->required()
-                    ->default(fn() => $this->table_number)
-                    ->disabled(),
+                    ->options([
+                        1 => 'Meja 1',
+                        2 => 'Meja 2',
+                        3 => 'Meja 3',
+                        4 => 'Meja 4',
+                        5 => 'Meja 5',
+                        6 => 'Meja 6',
+                        7 => 'Meja 7',
+                        8 => 'Meja 8',
+                        9 => 'Meja 9',
+                        10 => 'Meja 10',
+                    ])
+                    ->default(fn() => $this->table_number),
             ]);
     }
 
@@ -52,14 +64,14 @@ class CreateQr extends Page
         // Save the form data, including the SVG QR code image path
         Barcode::create([
             'table_number' => $this->table_number,
-            'users_id' => Auth::user()->id,
             'image' => $svgFilePath,
             'qr_value' => $host // Save SVG file path
         ]);
 
+
         // Send success notification
         Notification::make()
-            ->title('QR Code Created')
+            ->title('QR Code Terbuat')
             ->success()
             ->icon('heroicon-o-check-circle')
             ->send();

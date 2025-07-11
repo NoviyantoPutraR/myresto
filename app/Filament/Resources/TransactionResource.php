@@ -22,8 +22,31 @@ use Illuminate\Support\Facades\Route;
 class TransactionResource extends Resource
 {
     protected static ?string $model = Transaction::class;
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
+    protected static ?string $navigationLabel = 'Transaksi';
+
+    public static function getModelLabel(): string
+    {
+        return 'Transaksi';
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return 'Daftar Transaksi';
+    }
+
+    public static function canAccessPanel(\Filament\Panel $panel): bool
+    {
+        return in_array($panel->getId(), ['admin', 'kasir']);
+    }
+
+
 
     public static function getRecordTitle(?Model $record): string|null|Htmlable
     {
@@ -77,34 +100,41 @@ class TransactionResource extends Resource
                 Forms\Components\TextInput::make('total')
                     ->required()
                     ->numeric(),
+
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->query(Transaction::query()->orderByDesc('created_at'))
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->label('Transaction Code')
+                    ->label('Kode Transaksi')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Customer Name')
+                    ->label('Nama Pelanggan')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('user.name') // Menampilkan nama kasir
+                    ->label('Kasir/Admin')
+                    ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('phone')
-                    ->label('Phone Number')
+                    ->label('Nomor Telepon')
                     ->searchable(),
-                Tables\Columns\ImageColumn::make('barcodes.image')
-                    ->label('Barcode'),
+                Tables\Columns\TextColumn::make('barcode.table_number') // Menampilkan nomor meja dari relasi Barcode
+                    ->label('No Meja')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('payment_method')
-                    ->label('Payment Method')
+                    ->label('Metode Pembayaran')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('payment_status')
-                    ->label('Payment Status')
+                    ->label('Status Pembayaran')
                     ->badge()
                     ->colors([
-                        'success' => fn ($state): bool => in_array($state, ['SUCCESS', 'PAID', 'SETTLED']),
-                        'warning' => fn ($state): bool => $state === 'PENDING',
-                        'danger' => fn ($state): bool => in_array($state, ['FAILED', 'EXPIRED']),
+                        'success' => fn($state): bool => in_array($state, ['SUCCESS', 'PAID', 'SETTLED']),
+                        'warning' => fn($state): bool => $state === 'PENDING',
+                        'danger' => fn($state): bool => in_array($state, ['FAILED', 'EXPIRED']),
                     ]),
                 Tables\Columns\TextColumn::make('subtotal')
                     ->label('Subtotal')
@@ -118,27 +148,49 @@ class TransactionResource extends Resource
                     ->label('Total')
                     ->numeric()
                     ->money('IDR'),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Created At')
-                    ->dateTime()
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Kasir/Admin')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Waktu Transaksi')
+                    ->dateTime(),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Updated At')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([])
+            ->filters([
+                Tables\Filters\SelectFilter::make('payment_status')
+                    ->label('Status Pembayaran')
+                    ->options([
+                        'PAID' => 'Sudah Terbayar',
+                        'PENDING' => 'Menunggu Pembayaran',
+                        'FAILED' => 'Gagal',
+                        'EXPIRED' => 'Kedaluwarsa',
+                    ]),
+
+
+            ])
+
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Action::make('See transaction')
+                Action::make('Lihat Detail Transaksi')
+                    ->label('Lihat Detail')
                     ->color('success')
                     ->url(
-                        fn (Transaction $record): string => static::getUrl('transaction-items.index', [
+                        fn(Transaction $record): string => static::getUrl('transaction-items.index', [
                             'parent' => $record->id,
                         ])
                     ),
+                Action::make('Cetak Bukti Pembayaran')
+                    ->label('Cetak Bukti')
+                    ->icon('heroicon-o-printer')
+                    ->color('primary')
+                    ->url(fn(Transaction $record): string => route('transactions.print', $record->id))
+                    ->openUrlInNewTab(),
+
             ])
             ->bulkActions([]);
     }

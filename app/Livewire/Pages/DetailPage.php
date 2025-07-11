@@ -49,9 +49,10 @@ class DetailPage extends Component
         session(['cart_items' => $cartItems]);
         session(['has_unpaid_transaction' => false]);
 
-        $this->dispatch('toast',
+        $this->dispatch(
+            'toast',
             data: [
-                'message1' => 'Item added to cart',
+                'message1' => 'Item ditambahkan ke keranjang',
                 'message2' => $this->food->name,
                 'type' => 'success',
             ]

@@ -1,5 +1,5 @@
 <div x-data="{ open: false }" class="flex min-h-screen flex-col">
-    <livewire:components.page-title-nav :title="'Food Detail'" wire:key="{{ str()->random(50) }}" :hasBack="true"
+    <livewire:components.page-title-nav :title="'Detail Makanan'" wire:key="{{ str()->random(50) }}" :hasBack="true"
         :hasFilter="false"></livewire:components.page-title-nav>
 
     <div>
@@ -57,7 +57,7 @@
             <button wire:click="addToCart"
                 class="flex items-center gap-2 rounded-full bg-primary-10 px-6 py-2 font-semibold text-primary-50">
                 <img src="{{ asset('assets/icons/cart-active-icon.svg') }}" alt="Cart" />
-                <span>Cart</span>
+                <span>Keranjang</span>
             </button>
             <button wire:click="orderNow"
                 class="flex items-center gap-2 rounded-full bg-primary-50 px-6 py-2 font-semibold text-black-10">

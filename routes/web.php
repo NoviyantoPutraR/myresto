@@ -15,6 +15,36 @@ use App\Livewire\Pages\PaymentSuccessPage;
 use App\Livewire\Pages\ScanPage;
 use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
+use App\Http\Controllers\TransactionReportController;
+use App\Http\Controllers\TransactionPrintController;
+
+Route::get('/dashboard', function () {
+    return redirect('/admin');
+});
+
+// Generate dan download PDF transaksi
+Route::get('/transactions/{transaction}/print', [TransactionPrintController::class, 'print'])->name('transactions.print');
+//untuk pelanggan cetak bukti pembayaran
+
+Route::get('/payment/success', [TransactionController::class, 'success'])->name('payment.success');
+Route::get('/payment/failure', function () {
+    return view('payment.failure');
+})->name('payment.failure');
+
+Route::get('/transactions/{transaction}/print', [TransactionController::class, 'print'])->name('transactions.print');
+
+
+
+
+// Menampilkan form
+Route::get('/transactions/report/form', [TransactionReportController::class, 'yearlyForm'])->name('transactions.report.form');
+
+// Generate dan download PDF
+Route::get('/transactions/report/yearly', [TransactionReportController::class, 'yearlyReport'])->name('transactions.report.yearly');
+
+Route::get('/reports/yearly/excel', [TransactionReportController::class, 'yearlyExcel'])->name('reports.yearly.excel');
+
+
 
 Route::middleware(CheckTableNumber::class)->group(function () {
     // Beranda | Home
@@ -41,7 +71,6 @@ Route::middleware(CheckTableNumber::class)->controller(TransactionController::cl
 
     // Status pembayaran
     Route::get('/payment/status/{id}', 'paymentStatus')->name('payment.status');
-    Route::get('/payment/success', PaymentSuccessPage::class)->name('payment.success');
     Route::get('/payment/failure', PaymentFailurePage::class)->name('payment.failure');
 });
 

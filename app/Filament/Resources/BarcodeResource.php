@@ -9,14 +9,18 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-    use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 
 class BarcodeResource extends Resource
 {
     protected static ?string $model = Barcode::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-qr-code';
-    protected static ?string $navigationLabel = 'QR Codes';
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
 
     public static function canEdit(Model $record): bool
     {
@@ -30,9 +34,7 @@ class BarcodeResource extends Resource
                 Forms\Components\TextInput::make('table_number')
                     ->required()
                     ->default(fn() => strtoupper(chr(rand(65, 90)) . rand(1000, 9999))),
-                Forms\Components\Select::make('users_id')
-                    ->required()
-                    ->relationship('users', 'name'),
+
                 Forms\Components\FileUpload::make('image')
                     ->image()
                     ->required()
@@ -50,8 +52,6 @@ class BarcodeResource extends Resource
                 Tables\Columns\TextColumn::make('qr_value')
                     ->searchable(),
                 Tables\Columns\ImageColumn::make('image'),
-                Tables\Columns\TextColumn::make('users.name')
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

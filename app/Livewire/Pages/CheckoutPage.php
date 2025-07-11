@@ -26,7 +26,7 @@ class CheckoutPage extends Component
     #[Session(key: 'cart_items')]
     public $cartItems = [];
 
-    public $title = "All Foods";
+    public $title = "Semua Makanan";
 
     public $total;
     public $subtotal;

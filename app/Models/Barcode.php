@@ -15,4 +15,6 @@ class Barcode extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    protected $fillable = ['table_number', 'image', 'qr_value'];
 }

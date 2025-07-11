@@ -17,12 +17,37 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use App\Models\Transaction;
+use Filament\Navigation\NavigationBuilder;
+use Filament\Navigation\NavigationItem;
+use Filament\Navigation\MenuItem;
+use Illuminate\Support\Facades\Auth;
 
 class AdminPanelProvider extends PanelProvider
 {
+
+    public function navigation(NavigationBuilder $builder): NavigationBuilder
+    {
+        return $builder
+            ->items([
+                NavigationItem::make('Order Queue')
+                    ->url('/admin/order-queue') // atau sesuai route kamu
+                    ->icon('heroicon-o-list-bullet')
+                    ->badge(
+                        fn() => Transaction::where('payment_status', 'PAID')
+                            ->where('is_sent', false)
+                            ->whereDate('created_at', today())
+                            ->count()
+                    )
+                    ->badgeColor('success'),
+            ]);
+    }
+
+
     public function panel(Panel $panel): Panel
     {
         return $panel
+            ->brandName('Threebrothers Billiard Café dan Resto')
             ->default()
             ->id('admin')
             ->path('admin')
@@ -40,6 +65,18 @@ class AdminPanelProvider extends PanelProvider
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
             ])
+            ->userMenuItems([
+                MenuItem::make()
+                    ->label(function () {
+                        $user = Auth::user();
+                        $name = $user->name;
+                        $role = $user->roles->first()->name ?? 'Tanpa Role';
+                        return "$role";
+                    })
+                    ->icon('heroicon-o-user')
+                    ->url('#'),
+            ])
+
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

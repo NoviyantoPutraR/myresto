@@ -15,13 +15,12 @@ class AllFoodPage extends Component
     public $categories;
     public $selectedCategories = [];
     public $items;
-    public $title = "All Foods";
+    public $title = "Semua Makanan";
 
     public function mount(Foods $foods)
     {
         $this->categories = Category::all();
         $this->items = $foods->getAllFoods();
-
     }
 
     #[Layout('components.layouts.page')]

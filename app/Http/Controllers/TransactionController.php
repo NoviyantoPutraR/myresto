@@ -11,14 +11,57 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
-
 use Xendit\Configuration;
 use Xendit\Invoice\CreateInvoiceRequest;
 use Xendit\Invoice\InvoiceApi;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
+
+
 
 class TransactionController extends Controller
 {
     var $apiInstance = null;
+
+    public function success()
+    {
+        $externalId = session('external_id');
+
+        if (!$externalId) {
+            return redirect()->route('payment.failure');
+        }
+
+        $transaction = Transaction::where('external_id', $externalId)->first();
+
+        if (!$transaction) {
+            return redirect()->route('payment.failure');
+        }
+
+        return view('payment.success', compact('transaction'));
+    }
+
+
+    public function print(Transaction $transaction)
+    {
+        $transaction->load('items.food', 'barcode', 'user'); // Load semua relasi
+
+        if (request()->has('download')) {
+            // Kalau ada parameter 'download', generate PDF
+            $pdf = Pdf::loadView('transactions.print', [
+                'transaction' => $transaction,
+            ]);
+
+            return $pdf->download("bukti-pembayaran-{$transaction->code}.pdf");
+        }
+
+        // Kalau tidak ada parameter 'download', tampilkan biasa view-nya
+        return view('transactions.print', [
+            'transaction' => $transaction,
+        ]);
+    }
+
+
+
 
     public function __construct()
     {
@@ -75,7 +118,23 @@ class TransactionController extends Controller
 
         $tableNumberId = Barcode::where('table_number', $tableNumber)->first();
 
-        $transactionCode = 'TRX_' . mt_rand(100000, 999999);
+        // Cek apakah sudah ada transaksi PENDING atau PAID untuk meja ini dalam 10 menit terakhir
+        $recentTransaction = Transaction::where('barcodes_id', $tableNumberId->id)
+            ->whereIn('payment_status', ['PENDING', 'PAID'])
+            ->where('created_at', '>=', now()->subMinutes(10))
+            ->first();
+
+        if ($recentTransaction) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Meja sedang dalam proses transaksi. Silakan pilih meja lain atau tunggu beberapa saat.',
+            ], 409); // Conflict
+        }
+
+
+        // $transactionCode = 'TRX_' . mt_rand(100000, 999999);
+        $transactionCode = 'TRX_' . date('YmdHis') . '_' . Str::random(5);
+
 
         try {
             $subTotal = 0;
@@ -102,7 +161,7 @@ class TransactionController extends Controller
                 ->toArray();
 
 
-            $ppn = 0.11 * $subTotal;
+            $ppn = 0.10 * $subTotal;
 
             $description = <<<END
                 Pembayaran makanan<br>
@@ -128,7 +187,7 @@ class TransactionController extends Controller
                 'items' => $items,
                 'fees' => [
                     [
-                        'type' => 'PPN 11%',
+                        'type' => 'PPN 10%',
                         'value' => $ppn,
                     ],
                 ],
@@ -152,8 +211,15 @@ class TransactionController extends Controller
             $transaction->total = $subTotal + $ppn;
             $transaction->external_id = $uuid;
             $transaction->code = $transactionCode;
-            $transaction->payment_status = $invoice->getStatus();
+            // $transaction->payment_status = $invoice->getStatus();
+            $status = $invoice->getStatus();
+            $transaction->payment_status = $status;
+            // $transaction->user_id = Auth::id();
+            $transaction->user_id = Auth::check() ? Auth::id() : null;
+            Log::info('User ID saat transaksi:', ['user_id' => Auth::id(), 'user' => Auth::user()]);
+
             $transaction->save();
+
 
             foreach ($cartItems as $cartItem) {
                 $price = isset($cartItem['price_afterdiscount']) ? $cartItem['price_afterdiscount'] : $cartItem['price'];
@@ -177,6 +243,7 @@ class TransactionController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            $this->clearSession();
             return view('payment.failure');
         }
     }
@@ -236,10 +303,17 @@ class TransactionController extends Controller
             $payment_method = $data['payment_method'];
 
 
+            // $transaction = Transaction::where('external_id', $external_id)->first();
             $transaction = Transaction::where('external_id', $external_id)->first();
+
+            if (!$transaction) {
+                return response()->json(['message' => 'Transaction not found.'], 404);
+            }
+
             $transaction->payment_status = $status;
             $transaction->payment_method = $payment_method;
-            $transaction->updated_at = $data['updated'];
+            // $transaction->updated_at = $data['updated'];
+            $transaction->updated_at = \Carbon\Carbon::parse($data['updated']);
             $transaction->save();
 
             $this->clearSession();
